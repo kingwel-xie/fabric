@@ -44,7 +44,10 @@ func (l *LoggerLevels) ActivateSpec(spec string) error {
 	defer l.mutex.Unlock()
 
 	defaultLevel := zapcore.InfoLevel
-	specs := map[string]zapcore.Level{}
+	//specs := map[string]zapcore.Level{}
+	if l.specs == nil {
+		l.specs = map[string]zapcore.Level{}
+	}
 	for _, field := range strings.Split(spec, ":") {
 		split := strings.Split(field, "=")
 		switch len(split) {
@@ -53,6 +56,8 @@ func (l *LoggerLevels) ActivateSpec(spec string) error {
 				return errors.Errorf("invalid logging specification '%s': bad segment '%s'", spec, field)
 			}
 			defaultLevel = NameToLevel(field)
+			l.defaultLevel = defaultLevel
+			l.specs = map[string]zapcore.Level{}
 
 		case 2: // <logger>[,<logger>...]=<level>
 			if split[0] == "" {
@@ -72,7 +77,7 @@ func (l *LoggerLevels) ActivateSpec(spec string) error {
 				if !isValidLoggerName(strings.TrimSuffix(logger, ".")) {
 					return errors.Errorf("invalid logging specification '%s': bad logger name '%s'", spec, logger)
 				}
-				specs[logger] = level
+				l.specs[logger] = level
 			}
 
 		default:
@@ -81,15 +86,14 @@ func (l *LoggerLevels) ActivateSpec(spec string) error {
 	}
 
 	minLevel := defaultLevel
-	for _, lvl := range specs {
+	for _, lvl := range l.specs {
 		if lvl < minLevel {
 			minLevel = lvl
 		}
 	}
 
 	l.minLevel = minLevel
-	l.defaultLevel = defaultLevel
-	l.specs = specs
+	//l.specs = specs
 	l.levelCache = map[string]zapcore.Level{}
 
 	return nil

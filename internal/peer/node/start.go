@@ -9,6 +9,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/urfave/cli"
 	"io"
 	"io/ioutil"
 	"net"
@@ -19,6 +20,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	cmd "github.com/hyperledger/fabric/cmd/common"
 
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/golang/protobuf/proto"
@@ -863,6 +866,10 @@ func serve(args []string) error {
 		serve <- grpcErr
 	}()
 
+	go cmd.RunCli("peer", peerCmds, func(m map[string]interface{}) {
+		m["Peer"] = peerInstance
+	})
+
 	// Block until grpc server exits
 	return <-serve
 }
@@ -1353,4 +1360,71 @@ func (r *reset) ProcessProposal(ctx context.Context, signedProp *pb.SignedPropos
 		return nil, errors.New("endorse requests are blocked while ledgers are being rebuilt")
 	}
 	return r.next.ProcessProposal(ctx, signedProp)
+}
+
+// peer cli commands
+//
+var peerCmds = cli.Commands{
+	&cli.Command{
+		Category:    "builtin",
+		Name:        "show",
+		Aliases:     []string{"sh"},
+		Usage:       "show",
+		Description: "show peer",
+		Action: func(c *cli.Context) error {
+			peer := c.App.Metadata["Peer"].(*peer.Peer)
+			fmt.Println("Channel		:", peer.GetChannelsInfo())
+			fmt.Println("Config		:", peer.ServerConfig)
+			fmt.Println("LedgerMgr		:", *peer.LedgerMgr, peer.StoreProvider)
+			ids, _ := peer.LedgerMgr.GetLedgerIDs()
+			fmt.Println("LedgerMgr IDs	:", ids)
+			fmt.Println("GossipService	:", *peer.GossipService)
+			fmt.Println("Orderer		:", peer.OrdererEndpointOverrides)
+			fmt.Println("Channel		:", peer.GetChannelsInfo())
+			fmt.Println("Credential	:", *peer.CredentialSupport)
+			return nil
+		},
+	},
+	/*&cli.Command{
+		Category:    "builtin",
+		Name:        "log",
+		Usage:       "log",
+		Description: "log management",
+		Subcommands: []*cli.Command{
+			&cli.Command{
+				Name:    "ls",
+				Aliases: []string{"l"},
+				Usage:   "ls",
+				Action: func(c *cli.Context) error {
+					l := flogging.Loggers()
+					for _, n := range l {
+						fmt.Fprintf(c.App.Writer, "%40s : %s \n", n, flogging.LoggerLevel(n))
+					}
+					return nil
+				},
+			},
+			&cli.Command{
+				Name:    "level",
+				Aliases: []string{"lvl"},
+				Usage:   "level",
+				Action: func(c *cli.Context) error {
+					if c.Args().Len() != 2 {
+						fmt.Fprintln(c.App.Writer, "Bad argument")
+						return xcli.ErrBadArgument
+					}
+					var s string
+					if c.Args().First() == "all" {
+						s = fmt.Sprintf("%s", c.Args().Get(1))
+					} else {
+						s = fmt.Sprintf("%s=%s", c.Args().First(), c.Args().Get(1))
+					}
+
+					if err := flogging.ActivateSpecNoPanic(s); err != nil {
+						fmt.Fprintln(c.App.Writer, err)
+					}
+					return nil
+				},
+			},
+		},
+	},*/
 }

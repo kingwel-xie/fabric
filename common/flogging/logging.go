@@ -53,6 +53,10 @@ type Logging struct {
 	multiFormatter *fabenc.MultiFormatter
 	writer         zapcore.WriteSyncer
 	observer       Observer
+
+	// a map for all loggers
+	lock    sync.RWMutex
+	loggers map[string]*FabricLogger
 }
 
 // New creates a new logging system and initializes it with the provided
@@ -67,6 +71,7 @@ func New(c Config) (*Logging, error) {
 		},
 		encoderConfig:  encoderConfig,
 		multiFormatter: fabenc.NewMultiFormatter(),
+		loggers:        make(map[string]*FabricLogger, 10),
 	}
 
 	err := l.Apply(c)
@@ -245,6 +250,26 @@ func (l *Logging) WriteEntry(e zapcore.Entry, fields []zapcore.Field) {
 // Logger instantiates a new FabricLogger with the specified name. The name is
 // used to determine which log levels are enabled.
 func (l *Logging) Logger(name string) *FabricLogger {
-	zl := l.ZapLogger(name)
-	return NewFabricLogger(zl)
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	logger, ok := l.loggers[name]
+	if !ok {
+		zl := l.ZapLogger(name)
+		logger = NewFabricLogger(zl)
+		l.loggers[name] = logger
+	}
+	return logger
+}
+
+func (l *Logging) Loggers() []string {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
+
+	var loggers = make([]string, 0, len(l.loggers))
+	for n, _ := range l.loggers {
+		loggers = append(loggers, n)
+	}
+
+	return loggers
 }

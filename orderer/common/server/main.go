@@ -10,6 +10,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/cmd/common"
+	"github.com/urfave/cli"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -240,6 +242,15 @@ func Main() {
 		go initializeProfilingService(conf)
 	}
 	ab.RegisterAtomicBroadcastServer(grpcServer.Server(), server)
+
+	// CLI
+	go common.RunCli("orderer", ordererCmds, func(m map[string]interface{}) {
+		m["Server"] = server
+		m["LedgerFactory"] = lf
+		m["BCCSP"] = cryptoProvider
+		m["RPC"] = grpcServer
+	})
+
 	logger.Info("Beginning to serve requests")
 	grpcServer.Start()
 }
@@ -936,4 +947,25 @@ func prettyPrintStruct(i interface{}) {
 		buffer.WriteString(params[i])
 	}
 	logger.Infof("Orderer config values:%s\n", buffer.String())
+}
+
+var ordererCmds = cli.Commands{
+	&cli.Command{
+		Category:    "builtin",
+		Name:        "show",
+		Aliases:     []string{"sh"},
+		Usage:       "show",
+		Description: "show orderer",
+		Action: func(c *cli.Context) error {
+			server := c.App.Metadata["Server"].(*server)
+			fmt.Println("Server		:", *server)
+			fmt.Println("SystemChannel	:", server.SystemChannelID())
+			//fmt.Println("Orderer		:", server.Registrar.)
+
+			lf := c.App.Metadata["LedgerFactory"].(blockledger.Factory)
+			fmt.Println("LF				:", lf)
+			fmt.Println("LedgerFactory		:", lf.ChannelIDs())
+			return nil
+		},
+	},
 }

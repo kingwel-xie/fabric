@@ -84,3 +84,8 @@ func SetWriter(w io.Writer) io.Writer {
 func SetObserver(observer Observer) Observer {
 	return Global.SetObserver(observer)
 }
+
+// return all existing loggers' name
+func Loggers() []string {
+	return Global.Loggers()
+}
