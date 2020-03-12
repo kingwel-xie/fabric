@@ -965,6 +965,12 @@ var ordererCmds = cli.Commands{
 			lf := c.App.Metadata["LedgerFactory"].(blockledger.Factory)
 			fmt.Println("LF				:", lf)
 			fmt.Println("LedgerFactory		:", lf.ChannelIDs())
+
+			for _, lid := range lf.ChannelIDs() {
+				fl, _ := lf.GetOrCreate(lid)
+				h := fl.Height()
+				fmt.Printf("Chain=%s Height=%d\n", lid, h)
+			}
 			return nil
 		},
 	},

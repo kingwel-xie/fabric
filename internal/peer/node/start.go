@@ -868,6 +868,7 @@ func serve(args []string) error {
 
 	go cmd.RunCli("peer", peerCmds, func(m map[string]interface{}) {
 		m["Peer"] = peerInstance
+		m["LifeCycle"] = lifecycleCache
 	})
 
 	// Block until grpc server exits
@@ -1380,8 +1381,27 @@ var peerCmds = cli.Commands{
 			fmt.Println("LedgerMgr IDs	:", ids)
 			fmt.Println("GossipService	:", *peer.GossipService)
 			fmt.Println("Orderer		:", peer.OrdererEndpointOverrides)
-			fmt.Println("Channel		:", peer.GetChannelsInfo())
 			fmt.Println("Credential	:", *peer.CredentialSupport)
+
+			for _, ci := range peer.GetChannelsInfo() {
+				c := peer.Channel(ci.ChannelId)
+				fmt.Println("Ledger", ci.ChannelId)
+				fmt.Println("Ledger", c.Ledger())
+				bci, _ := c.Ledger().GetBlockchainInfo()
+				fmt.Println("BlockInfo", bci.Height, bci.CurrentBlockHash, bci.PreviousBlockHash, bci.String())
+			}
+
+			lifeCycleCache := c.App.Metadata["LifeCycle"].(*lifecycle.Cache)
+			fmt.Println(lifeCycleCache)
+
+			for _, c := range lifeCycleCache.ListInstalledChaincodes() {
+				fmt.Println(c.Name, c.Hash, c.Label, c.PackageID, c.Version)
+				for channel, chaincodeMetadata := range c.References {
+					for _, metadata := range chaincodeMetadata {
+						fmt.Println("\t", channel, metadata)
+					}
+				}
+			}
 			return nil
 		},
 	},

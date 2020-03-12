@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"io"
 	"os"
 	"sort"
@@ -113,6 +114,62 @@ var builtinCmds = cli.Commands{
 		Description: "exit CLI",
 		Action: func(c *cli.Context) error {
 			return ErrQuitCLI
+		},
+	},
+	&cli.Command{
+		Category:    "builtin",
+		Name:        "db",
+		Usage:       "db",
+		Description: "",
+		Action: func(c *cli.Context) error {
+			//path := "D:\\work\\src\\github.com\\hyperledger\\fabric\\sampleconfig\\var\\hyperledger\\production\\orderer\\index"
+
+			var paths = []string{
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/transientstore",
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/ledgersData/chains/index",
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/ledgersData/pvtdataStore",
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/ledgersData/historyLeveldb",
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/ledgersData/configHistory",
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/ledgersData/bookkeeper",
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/ledgersData/stateLeveldb",
+				"d:/work/src/github.com/hyperledger/fabric/sampleconfig/var/hyperledger/production/ledgersData/ledgerProvider",
+			}
+
+			f := func(path string) {
+				defer func() {
+					if err := recover(); err != nil {
+						fmt.Println(err)
+					}
+				}()
+
+				dbConf := &leveldbhelper.Conf{
+					DBPath:                path,
+					ExpectedFormatVersion: "",
+				}
+
+				db := leveldbhelper.CreateDB(dbConf)
+				db.Open()
+				defer db.Close()
+
+				iter := db.GetIterator(nil, nil)
+				defer iter.Release()
+				for iter.Next() {
+					l := len(iter.Value())
+					var s string
+					if l > 10 {
+						l = 10
+						s = "..."
+					}
+
+					fmt.Println(string(iter.Key()), iter.Value()[:l], s)
+				}
+			}
+
+			for _, p := range paths {
+				fmt.Println("-------------------------------------- : ", p)
+				f(p)
+			}
+			return nil
 		},
 	},
 	&cli.Command{

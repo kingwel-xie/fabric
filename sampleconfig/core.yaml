@@ -455,18 +455,19 @@ vm:
     # unix:///var/run/docker.sock
     # http://localhost:2375
     # https://localhost:2376
-    endpoint: unix:///var/run/docker.sock
+    endpoint: https://192.168.99.100:2376
+    #    unix:///var/run/docker.sock
 
     # settings for docker vms
     docker:
         tls:
-            enabled: false
+            enabled: true
             ca:
-                file: docker/ca.crt
+                file: C:\Users\Administrator\.docker\machine\machines\default\ca.pem
             cert:
-                file: docker/tls.crt
+                file: C:\Users\Administrator\.docker\machine\machines\default\cert.pem
             key:
-                file: docker/tls.key
+                file: C:\Users\Administrator\.docker\machine\machines\default\key.pem
 
         # Enables/disables the standard out/err from chaincode containers for
         # debugging purposes
