@@ -289,6 +289,8 @@ func (h *Handler) serialSend(msg *pb.ChaincodeMessage) error {
 	h.serialLock.Lock()
 	defer h.serialLock.Unlock()
 
+	chaincodeLogger.Debugf("[%s] Fabric side sending ChaincodeMessage of type: %s in state %s", shorttxid(msg.Txid), msg.Type, h.state)
+
 	if err := h.chatStream.Send(msg); err != nil {
 		err = errors.WithMessagef(err, "[%s] error sending %s", shorttxid(msg.Txid), msg.Type)
 		chaincodeLogger.Errorf("%+v", err)

@@ -362,6 +362,10 @@ func serve(args []string) error {
 		LegacyDeployedCCInfoProvider: &lscc.DeployedCCInfoProvider{},
 	}
 
+	// Configure CC package storage
+	lsccInstallPath := filepath.Join(coreconfig.GetPath("peer.fileSystemPath"), "chaincodes")
+	ccprovider.SetChaincodesPath(lsccInstallPath)
+
 	ccInfoFSImpl := &ccprovider.CCInfoFSImpl{GetHasher: factory.GetDefault()}
 
 	// legacyMetadataManager collects metadata information from the legacy
@@ -453,10 +457,6 @@ func serve(args []string) error {
 	defer gossipService.Stop()
 
 	peerInstance.GossipService = gossipService
-
-	// Configure CC package storage
-	lsccInstallPath := filepath.Join(coreconfig.GetPath("peer.fileSystemPath"), "chaincodes")
-	ccprovider.SetChaincodesPath(lsccInstallPath)
 
 	if err := lifecycleCache.InitializeLocalChaincodes(); err != nil {
 		return errors.WithMessage(err, "could not initialize local chaincodes")
@@ -869,6 +869,8 @@ func serve(args []string) error {
 	go cmd.RunCli("peer", peerCmds, func(m map[string]interface{}) {
 		m["Peer"] = peerInstance
 		m["LifeCycle"] = lifecycleCache
+		m["LegacyLifeCycle"] = legacyMetadataManager
+		m["ChaincodeSupport"] = chaincodeSupport
 	})
 
 	// Block until grpc server exits
@@ -1386,22 +1388,37 @@ var peerCmds = cli.Commands{
 			for _, ci := range peer.GetChannelsInfo() {
 				c := peer.Channel(ci.ChannelId)
 				fmt.Println("Ledger", ci.ChannelId)
-				fmt.Println("Ledger", c.Ledger())
+				//fmt.Println("Ledger", c.Ledger())
 				bci, _ := c.Ledger().GetBlockchainInfo()
-				fmt.Println("BlockInfo", bci.Height, bci.CurrentBlockHash, bci.PreviousBlockHash, bci.String())
+				fmt.Printf("BlockInfo: Hright=%d Hash=%x PrevHash=%x\n", bci.Height, bci.CurrentBlockHash, bci.PreviousBlockHash)
 			}
 
 			lifeCycleCache := c.App.Metadata["LifeCycle"].(*lifecycle.Cache)
-			fmt.Println(lifeCycleCache)
+			fmt.Println("LifeCycleCache: ", lifeCycleCache)
 
 			for _, c := range lifeCycleCache.ListInstalledChaincodes() {
 				fmt.Println(c.Name, c.Hash, c.Label, c.PackageID, c.Version)
 				for channel, chaincodeMetadata := range c.References {
 					for _, metadata := range chaincodeMetadata {
-						fmt.Println("\t", channel, metadata)
+						fmt.Println("\t Meta", channel, metadata)
 					}
 				}
 			}
+
+			//legacyLifeCycle := c.App.Metadata["LegacyLifeCycle"].(*cclifecycle.MetadataManager)
+			//fmt.Println(legacyLifeCycle)
+
+			fmt.Println("Legacy lscc chaincodes:")
+			codes, _ := ccprovider.GetInstalledChaincodes()
+			for _, c:= range codes.Chaincodes {
+				fmt.Println(c)
+			}
+
+			csp := c.App.Metadata["ChaincodeSupport"].(*chaincode.ChaincodeSupport)
+			fmt.Println(csp)
+			fmt.Println(csp.HandlerRegistry)
+
+
 			return nil
 		},
 	},
