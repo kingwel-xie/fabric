@@ -169,6 +169,17 @@ func (r *HandlerRegistry) Deregister(ccid string) error {
 	return nil
 }
 
+// Handler retrieves the handler for a chaincode instance.
+func (r *HandlerRegistry) ListHandler() []string {
+	var list []string
+	r.mutex.Lock()
+	for _, c := range r.handlers {
+		list = append(list, c.chaincodeID)
+	}
+	r.mutex.Unlock()
+	return list
+}
+
 type TxQueryExecutorGetter struct {
 	HandlerRegistry *HandlerRegistry
 	CCID            string

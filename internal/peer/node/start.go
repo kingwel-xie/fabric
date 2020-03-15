@@ -1373,53 +1373,86 @@ var peerCmds = cli.Commands{
 		Name:        "show",
 		Aliases:     []string{"sh"},
 		Usage:       "show",
-		Description: "show peer",
-		Action: func(c *cli.Context) error {
-			peer := c.App.Metadata["Peer"].(*peer.Peer)
-			fmt.Println("Channel		:", peer.GetChannelsInfo())
-			fmt.Println("Config		:", peer.ServerConfig)
-			fmt.Println("LedgerMgr		:", *peer.LedgerMgr, peer.StoreProvider)
-			ids, _ := peer.LedgerMgr.GetLedgerIDs()
-			fmt.Println("LedgerMgr IDs	:", ids)
-			fmt.Println("GossipService	:", *peer.GossipService)
-			fmt.Println("Orderer		:", peer.OrdererEndpointOverrides)
-			fmt.Println("Credential	:", *peer.CredentialSupport)
-
-			for _, ci := range peer.GetChannelsInfo() {
-				c := peer.Channel(ci.ChannelId)
-				fmt.Println("Ledger", ci.ChannelId)
-				//fmt.Println("Ledger", c.Ledger())
-				bci, _ := c.Ledger().GetBlockchainInfo()
-				fmt.Printf("BlockInfo: Hright=%d Hash=%x PrevHash=%x\n", bci.Height, bci.CurrentBlockHash, bci.PreviousBlockHash)
-			}
-
-			lifeCycleCache := c.App.Metadata["LifeCycle"].(*lifecycle.Cache)
-			fmt.Println("LifeCycleCache: ", lifeCycleCache)
-
-			for _, c := range lifeCycleCache.ListInstalledChaincodes() {
-				fmt.Println(c.Name, c.Hash, c.Label, c.PackageID, c.Version)
-				for channel, chaincodeMetadata := range c.References {
-					for _, metadata := range chaincodeMetadata {
-						fmt.Println("\t Meta", channel, metadata)
+		Description: "show peer information",
+		HideHelp:    true,
+		Subcommands: []*cli.Command{
+			&cli.Command{
+				Name:    "basic",
+				Aliases: []string{"b"},
+				Usage:   "show basic",
+				Action: func(c *cli.Context) error {
+					peer := c.App.Metadata["Peer"].(*peer.Peer)
+					fmt.Println("Channel		:", peer.GetChannelsInfo())
+					fmt.Println("Config		:", peer.ServerConfig)
+					fmt.Println("LedgerMgr		:", *peer.LedgerMgr, peer.StoreProvider)
+					ids, _ := peer.LedgerMgr.GetLedgerIDs()
+					fmt.Println("LedgerMgr IDs	:", ids)
+					fmt.Println("GossipService	:", *peer.GossipService)
+					fmt.Println("Orderer		:", peer.OrdererEndpointOverrides)
+					fmt.Println("Credential	:", *peer.CredentialSupport)
+					return nil
+				},
+			},
+			&cli.Command{
+				Name:    "ledger",
+				Aliases: []string{"le"},
+				Usage:   "show ledger",
+				Action: func(c *cli.Context) error {
+					peer := c.App.Metadata["Peer"].(*peer.Peer)
+					for _, ci := range peer.GetChannelsInfo() {
+						c := peer.Channel(ci.ChannelId)
+						fmt.Println("Ledger", ci.ChannelId)
+						//fmt.Println("Ledger", c.Ledger())
+						bci, _ := c.Ledger().GetBlockchainInfo()
+						fmt.Printf("BlockInfo: Hright=%d Hash=%x PrevHash=%x\n", bci.Height, bci.CurrentBlockHash, bci.PreviousBlockHash)
 					}
-				}
-			}
+					return nil
+				},
+			},
+			&cli.Command{
+				Name:    "lifecycle",
+				Aliases: []string{"lc"},
+				Usage:   "show lifecycle",
+				Action: func(c *cli.Context) error {
+					lifeCycleCache := c.App.Metadata["LifeCycle"].(*lifecycle.Cache)
+					fmt.Println("LifeCycleCache: ", lifeCycleCache)
 
-			//legacyLifeCycle := c.App.Metadata["LegacyLifeCycle"].(*cclifecycle.MetadataManager)
-			//fmt.Println(legacyLifeCycle)
+					for _, c := range lifeCycleCache.ListInstalledChaincodes() {
+						fmt.Println(c.Name, c.Hash, c.Label, c.PackageID, c.Version)
+						for channel, chaincodeMetadata := range c.References {
+							for _, metadata := range chaincodeMetadata {
+								fmt.Println("\t\t ", channel, metadata)
+							}
+						}
+					}
+					return nil
+				},
+			},
+			&cli.Command{
+				Name:  "lscc",
+				Usage: "show lscc",
+				Action: func(c *cli.Context) error {
+					//legacyLifeCycle := c.App.Metadata["LegacyLifeCycle"].(*cclifecycle.MetadataManager)
+					//fmt.Println(legacyLifeCycle)
 
-			fmt.Println("Legacy lscc chaincodes:")
-			codes, _ := ccprovider.GetInstalledChaincodes()
-			for _, c:= range codes.Chaincodes {
-				fmt.Println(c)
-			}
-
-			csp := c.App.Metadata["ChaincodeSupport"].(*chaincode.ChaincodeSupport)
-			fmt.Println(csp)
-			fmt.Println(csp.HandlerRegistry)
-
-
-			return nil
+					fmt.Println("Legacy lscc chaincodes:")
+					codes, _ := ccprovider.GetInstalledChaincodes()
+					for _, c := range codes.Chaincodes {
+						fmt.Println(c)
+					}
+					return nil
+				},
+			},
+			&cli.Command{
+				Name:    "cc-handler",
+				Aliases: []string{"cch"},
+				Usage:   "show cc-handler",
+				Action: func(c *cli.Context) error {
+					csp := c.App.Metadata["ChaincodeSupport"].(*chaincode.ChaincodeSupport)
+					fmt.Println(csp.HandlerRegistry.ListHandler())
+					return nil
+				},
+			},
 		},
 	},
 	/*&cli.Command{
